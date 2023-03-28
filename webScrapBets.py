@@ -53,23 +53,22 @@ def scrapNIKE():
 
 def scrapTIPSPORT():
     from selenium import webdriver
-    from selenium.webdriver.common.keys import Keys
     import re
-
+    dataDB = []
     driver = webdriver.Chrome('C:/Users/Administrator/AppData/Local/Programs/Python/Python310/chromedriver.exe')
     driver.get("https://www.tipsport.sk/kurzy/futbal-16") #  ?limit=325
-    with open('tipsport.txt', 'w') as f:
+    with open('tipsport.html', 'w') as f:
         f.write(driver.page_source)
-        listOdds = re.findall("<span data-m=\"(\d*)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d*.\d*.\d*)</span><span class=\"marL-leftS\">(\d*:\d*)<.*?\|\|1\">.*?(\d*.\d*)<.*?\|\|1x\">.*?(\d*.\d*)<.*?\|\|x\">.*?(\d*.\d*)<.*?\|\|x2\">.*?(\d*.\d*)<.*?\|\|2\">.*?(\d*.\d*)", driver.page_source)
-        for i in listOdds:
-            print(i)
-
+        listMatch = re.findall("(<div class=\"o-matchRow\".*?<div class=\"o-matchRow__results\"></div></div>)", driver.page_source)
+        for i in listMatch:
+            odd = re.findall("<span data-m=\"(\d+)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d+.\d+.\d+)</span><span class=\"marL-leftS\">(\d+:\d+)(?:(?:.*?\|\|1\">.*?(\d+.\d+))|(?:.*?\|\|1x\">.*?(\d+.\d+))|(?:.*?\|\|x\">.*?(\d+.\d+))|(?:.*?\|\|x2\">.*?(\d+.\d+))|(?:.*?\|\|2\">.*?(\d+.\d+)))", i)
+            if len(odd) == 1:
+                dataDB.append((odd[0][0], odd[0][1]))
+    print(dataDB)
     driver.quit()
-
-    # "<span data-m=\"(\d*)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d*.\d*.\d*)</span><span class=\"marL-leftS\">(\d*:\d*)<.*?\|\|1\">.*?(\d*.\d*)<.*?\|\|1x\">.*?(\d*.\d*)<.*?\|\|x\">.*?(\d*.\d*)<.*?\|\|x2\">.*?(\d*.\d*)<.*?\|\|2\">.*?(\d*.\d*)"gm
 
 
 if __name__ == '__main__':
-    setDB()
-    scrapNIKE()
-    # scrapTIPSPORT()
+    # setDB()
+    # scrapNIKE()
+    scrapTIPSPORT()
