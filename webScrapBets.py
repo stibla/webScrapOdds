@@ -11,9 +11,15 @@ def setDB(dropTable = False, createTable = False, deleteAllRows = False):
     if deleteAllRows: cur.execute("DELETE FROM odds")
     con.commit()
 
-def scrapNIKE():
+def saveToDB(dataDB, betOffice):
     con = sqlite3.connect("data.db")
     cur = con.cursor()
+    res = cur.executemany("""INSERT INTO odds(s_betOffice, s_betId, participant1, participant2, s_participantOrder, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, s_date_create)
+                            VALUES ('""" + betOffice + """', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))""", dataDB)
+    con.commit()
+    print(betOffice + " - insert", res.rowcount, "counts")
+
+def scrapNIKE():
     # response = urlopen("https://api.nike.sk/api/nikeone/v1/boxes/search/portal?betNumbers&date&live=true&minutes&order&prematch=true&results=false")
     response = urlopen("https://api.nike.sk/api/nikeone/v1/boxes/search/portal?betNumbers&date&limit=100&live=true&minutes&order=10&prematch=true&results=false")
     data_json = json.loads(response.read())
@@ -35,19 +41,12 @@ def scrapNIKE():
                 if 'odds' in k and k['row'] == 1 and k['col'] == 2: n_X2 = k['odds']
         if not(n_1 is None and n_X is None and n_2 is None and n_1X is None and n_12 is None and n_X2 is None):            
             dataDB.append((i['betId'], participant1, participant2, i['participantOrder'], i['expirationTime'][0:10], i['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
-
-    res = cur.executemany("""INSERT INTO odds(s_betOffice, s_betId, participant1, participant2, s_participantOrder, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, s_date_create)
-                            VALUES ('NIKE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))""", dataDB)
-    con.commit()
-    print("NIKE - insert", res.rowcount, "counts")
-
+    saveToDB(dataDB, "NIKE")
 
 def scrapTIPSPORT():
     from selenium import webdriver
     import re
     from datetime import datetime
-    con = sqlite3.connect("data.db")
-    cur = con.cursor()
     dataDB = []
     driver = webdriver.Chrome('C:/Users/Administrator/AppData/Local/Programs/Python/Python310/chromedriver.exe')
     driver.get("https://www.tipsport.sk/kurzy/futbal-16?limit=325") #  ?limit=325
@@ -65,15 +64,9 @@ def scrapTIPSPORT():
                     if j[0] == 'x': n_X = j[1]
                     if j[0] == 'x2': n_X2 = j[1]
                     if j[0] == '2': n_2 = j[1]
-
-                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]) if len(match[0][1].split(" - ", 1)) > 1 else "", match[0][1], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%Y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
-                    
-    res = cur.executemany("""INSERT INTO odds(s_betOffice, s_betId, participant1, participant2, s_participantOrder, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, s_date_create)
-                             VALUES ('TIPSPORT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))""", dataDB)
-    con.commit()
-    print("TIPSPORT - insert", res.rowcount, "counts")
+                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]) if len(match[0][1].split(" - ", 1)) > 1 else "", match[0][1], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%Y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))                    
+    saveToDB(dataDB, "TIPSPORT")
     driver.quit()
-
 
 if __name__ == '__main__':
     setDB(False, False, True)
