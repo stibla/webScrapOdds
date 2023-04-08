@@ -10,7 +10,7 @@ def setDB(dropTable = False, createTable = False, deleteAllRows = False):
     # cur = con.cursor()
     if dropTable: 
         con.execute("DROP TABLE IF EXISTS odds")
-        # con.execute("DROP TABLE IF EXISTS e_participants")
+        con.execute("DROP TABLE IF EXISTS e_participants")
     if createTable: 
         con.execute("""CREATE TABLE IF NOT EXISTS odds(
                     n_id_odd INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -63,13 +63,13 @@ def scrapNIKE():
         # with open('nike.json', 'w') as f:
         #     f.write(json.dumps(data_json))
         dataDB = []
-        for i in data_json['bets']:
+        for b in data_json['bets']:
             n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
             participant1 = participant2 = ""
-            if len(i['participants']) > 1:
-                participant1 = i['participants'][0]
-                participant2 = i['participants'][1]
-                for j in i['selectionGrid']:
+            if len(b['participants']) > 1:
+                participant1 = b['participants'][0]
+                participant2 = b['participants'][1]
+                for j in b['selectionGrid']:
                     for k in j:
                         if 'odds' in k and k['row'] == 0 and k['col'] == 0 and k['odds'] > 1 : n_1 = k['odds']
                         if 'odds' in k and k['row'] == 0 and k['col'] == 1 and k['odds'] > 1 : n_X = k['odds']
@@ -78,7 +78,7 @@ def scrapNIKE():
                         if 'odds' in k and k['row'] == 1 and k['col'] == 1 and k['odds'] > 1 : n_12 = k['odds']
                         if 'odds' in k and k['row'] == 1 and k['col'] == 2 and k['odds'] > 1 : n_X2 = k['odds']
                 if not(n_1 is None and n_X is None and n_2 is None and n_1X is None and n_12 is None and n_X2 is None):
-                    dataDB.append((i['betId'], participant1, participant2, i['participantOrder'], i['expirationTime'][0:10], i['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                    dataDB.append((b['betId'], participant1, participant2, b['participantOrder'], b['expirationTime'][0:10], b['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "NIKE")
         hasMoreBets = False
         if data_json['hasMoreBets']:
@@ -148,9 +148,47 @@ def scrapFORTUNA():
 
 def scrapDOXXBET():
     req = Request(url="https://www.doxxbet.sk/offer/GetOfferList", method='POST')
-    data_json = json.loads(urlopen(req).read())    
-    with open('doxxbet.json', 'w') as f:
-        f.write(json.dumps(data_json))
+    data_json = json.loads(urlopen(req).read())
+    
+    # with open('doxxbet.json', 'w') as f:
+    #     f.write(json.dumps(data_json))   json.dumps(, ensure_ascii=False)
+    # data_json = json.load(open('doxxbet.json', errors='ignore'))
+
+    # json.loads() method can be used to parse a valid JSON string and convert it into a Python Dictionary. 
+    # It is mainly used for deserializing native string, byte, or byte array which consists of JSON data 
+    # into Python Dictionary.
+
+    # json.load() takes a file object and returns the json object. A JSON object contains data 
+    # in the form of key/value pair. The keys are strings and the values are the JSON types. 
+    # Keys and values are separated by a colon. Each entry (key/value pair) is separated by a comma
+
+    # json.dumps() function will convert a subset of Python objects into a json string. 
+    # Not all objects are convertible and you may need to create a dictionary of data you wish 
+    # to expose before serializing to JSON.
+
+    # json.dump() json module in Python module provides a method called dump() which converts the 
+    # Python objects into appropriate json objects. It is a slight variant of dumps() method.
+
+    dataDB = []
+    
+    for e in data_json['EventChanceTypes']:
+        n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
+        if e['EventChanceTypeID'] != 0 and len(e['EventName'].split(" vs. ", 1)) > 1:
+            if str(e['EventChanceTypeID']) + '_1' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_1']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate'] > 1: n_1 = data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate']
+            if str(e['EventChanceTypeID']) + '_X' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_X']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_X']['OddsRate'] > 1: n_X = data_json['Odds'][str(e['EventChanceTypeID']) + '_X']['OddsRate']
+            if str(e['EventChanceTypeID']) + '_2' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_2']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_2']['OddsRate'] > 1: n_2 = data_json['Odds'][str(e['EventChanceTypeID']) + '_2']['OddsRate']
+            if str(e['EventChanceTypeID']) + '_1X' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_1X']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_1X']['OddsRate'] > 1: n_1X = data_json['Odds'][str(e['EventChanceTypeID']) + '_1X']['OddsRate']
+            if str(e['EventChanceTypeID']) + '_X2' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_X2']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_X2']['OddsRate'] > 1: n_X2 = data_json['Odds'][str(e['EventChanceTypeID']) + '_X2']['OddsRate']
+            if str(e['EventChanceTypeID']) + '_12' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_12']: 
+                if data_json['Odds'][str(e['EventChanceTypeID']) + '_12']['OddsRate'] > 1: n_12 = data_json['Odds'][str(e['EventChanceTypeID']) + '_12']['OddsRate']
+            dataDB.append((str(e['EventChanceTypeID']), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[0]), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[1]), e['EventName'], e['EventDate'][0:10], e['EventDate'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
+            
+    saveToDB(dataDB, "DOXXBET")
 
 def setParticipantEinDB():
     con = sqlite3.connect("data.db")
@@ -161,34 +199,86 @@ def setParticipantEinDB():
     con.commit()
     print("Inserted", res.rowcount, "new participants")
 
-    res = con.execute("""UPDATE e_participants
-            SET s_new_name = substr(s_new_name,4) || ' ' || substr(s_new_name,1,2)
-            WHERE substr(s_new_name,1,3) IN ('ŠK ', 'UD ','TJ ','TB ','SV ','SK ','SD ','SC ','RW ','NK ','IK ','HB ','FK ','FC ','CS ','CR ','CF ','CD ','CA ','BK ','AS ', 'AC ')""")
-    con.commit()
-    print("Repaired prefix", res.rowcount, "participants")
+    # res = con.execute("""UPDATE e_participants
+    #         SET s_new_name = substr(s_new_name,4) || ' ' || substr(s_new_name,1,2)
+    #         WHERE substr(s_new_name,1,3) IN ('ŠK ', 'UD ','TJ ','TB ','SV ','SK ','SD ','SC ','RW ',
+    #         'NK ','IK ','HB ','FK ','FC ','CS ','CR ','CF ','CD ','CA ','BK ','AS ', 'AC '
+    #         , 'BC ', 'KK ', 'VK ', 'HC ')""")
+    # con.commit()
+    # print("Repaired prefix", res.rowcount, "participants")
 
     res = con.execute("""UPDATE e_participants
             SET s_new_name = trim(s_new_name)
-            where e_participants.s_new_name like '% '""")
+            where e_participants.s_new_name like ' % '""")
     con.commit()
     print("Repaired trim", res.rowcount, "participants")
+
+    cur = con.execute("""SELECT n_id_participants, s_new_name FROM e_participants""")
+    for row in cur:
+        changeNewName = changeDiacritics(row[1])
+        if row[1] != changeDiacritics(row[1]):
+            idParticipants = row[0]
+            con.execute("""UPDATE e_participants
+                SET s_new_name = ?
+                where e_participants.n_id_participants = ?""", (changeNewName, idParticipants))
+    con.commit()
+    print("Repaired Diacritics")
+
+    cur = con.execute("""SELECT n_id_participants, s_new_name FROM e_participants""")
+    for row in cur:
+        changeNewName = prefix2ToEnd(row[1])
+        if row[1] != prefix2ToEnd(row[1]):
+            idParticipants = row[0]
+            con.execute("""UPDATE e_participants
+                SET s_new_name = ?
+                where e_participants.n_id_participants = ?""", (changeNewName, idParticipants))
+    con.commit()
+    print("Repaired prefix2")
 
     con.close()
 
 def findBets():
     con = sqlite3.connect("data.db")
-    # cur = con.cursor()
-    cur = con.execute("""SELECT * FROM (
-   SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, s_expirationDate, COUNT(1), 
-   max(n_1) as max_1, max(n_X) as max_X, max(n_2) as max_2, max(n_1X) as max_1X, max(n_12) as max_12, max(n_X2) as max_X2,
-   case when COUNT(1) > 1 and max(n_1) is not null and max(n_X2) is not null then 100/max(n_1) + 100/max(n_X2) end as koef_1_X2,
-   case when COUNT(1) > 1 and max(n_2) is not null and max(n_1X) is not null then 100/max(n_2) + 100/max(n_1X) end as koef_2_1X,
-   case when COUNT(1) > 1 and max(n_X) is not null and max(n_12) is not null then 100/max(n_X) + 100/max(n_12) end as koef_X_12,
-   case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2
-        FROM odds, e_participants as part1,  e_participants as part2
-        where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name
-        GROUP BY part1.s_new_name, part2.s_new_name, s_expirationDate
-        ) WHERE (koef_1_X2 < 100.1 or koef_1_X2 < 100.1 or koef_2_1X < 100.1 or koef_X_12 < 100.1 or koef_1_X_2 < 100.1)""")
+
+    cur = con.execute("""SELECT s_betOffice, COUNT(1)
+        FROM odds
+        GROUP BY s_betOffice""")
+    print("No of odds:")
+    for row in cur:
+        print(row)
+    
+    cur = con.execute("""SELECT POCET, COUNT(1) POCTY FROM (
+        SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.s_expirationDate, odds.s_expirationTime, COUNT(1) POCET
+                        FROM odds, e_participants as part1, e_participants as part2
+                        where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name
+        GROUP BY part1.s_new_name, part2.s_new_name, odds.s_expirationDate, odds.s_expirationTime
+        ) GROUP BY POCET""")
+    print("No of mergers:")
+    for row in cur:
+        print(row)
+
+    cur = con.execute("""SELECT BestOdds.*, chngOdds.* from
+        (SELECT * FROM (
+            SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, s_expirationDate, s_expirationTime, COUNT(1), 
+                max(n_1) as max_1, max(n_X) as max_X, max(n_2) as max_2, max(n_1X) as max_1X, max(n_12) as max_12, max(n_X2) as max_X2,
+                case when COUNT(1) > 1 and max(n_1) is not null and max(n_X2) is not null then 100/max(n_1) + 100/max(n_X2) end as koef_1_X2,
+                case when COUNT(1) > 1 and max(n_2) is not null and max(n_1X) is not null then 100/max(n_2) + 100/max(n_1X) end as koef_2_1X,
+                case when COUNT(1) > 1 and max(n_X) is not null and max(n_12) is not null then 100/max(n_X) + 100/max(n_12) end as koef_X_12,
+                case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2
+                FROM (SELECT s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, min(n_1) n_1,
+					min(n_X) n_X, min(n_2) n_2, min(n_1X) n_1X, min(n_12) n_12, min(n_X2) n_X2
+					FROM odds GROUP BY s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime) min_odds
+					, e_participants as part1,  e_participants as part2
+                where min_odds.s_participant1 = part1.s_old_name and min_odds.s_participant2 = part2.s_old_name
+                GROUP BY part1.s_new_name, part2.s_new_name, s_expirationDate, s_expirationTime
+                ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100)) As BestOdds,
+        (SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.*
+                FROM odds, e_participants as part1, e_participants as part2
+                where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name) as chngOdds
+                where BestOdds.participant1 = chngOdds.participant1 and BestOdds.participant2 = chngOdds.participant2 and BestOdds.s_expirationDate = chngOdds.s_expirationDate 
+				and BestOdds.s_expirationTime = chngOdds.s_expirationTime 
+            order by 1,2,3""")
+    print("Result:")
     for row in cur:
         print(row)
     con.close()
@@ -200,12 +290,66 @@ def deleteOldOdds():
     print("Deleted ", res.rowcount, "old odds")
     con.close()
 
+def changeDiacritics(stringToChange):
+    stringToChange = re.sub("á", "a", stringToChange)
+    stringToChange = re.sub("Á", "A", stringToChange)
+    stringToChange = re.sub("ą", "a", stringToChange)
+    stringToChange = re.sub("Ä", "A", stringToChange)
+    stringToChange = re.sub("ä", "a", stringToChange)
+    stringToChange = re.sub("ć", "c", stringToChange)
+    stringToChange = re.sub("Č", "C", stringToChange)
+    stringToChange = re.sub("č", "c", stringToChange)
+    stringToChange = re.sub("Ď", "D", stringToChange)
+    stringToChange = re.sub("ď", "d", stringToChange)
+    stringToChange = re.sub("đ", "d", stringToChange)
+    stringToChange = re.sub("ė", "e", stringToChange)
+    stringToChange = re.sub("é", "e", stringToChange)
+    stringToChange = re.sub("ě", "e", stringToChange)
+    stringToChange = re.sub("ę", "e", stringToChange)
+    stringToChange = re.sub("Í", "I", stringToChange)
+    stringToChange = re.sub("í", "i", stringToChange)
+    stringToChange = re.sub("Ľ", "L", stringToChange)
+    stringToChange = re.sub("ľ", "l", stringToChange)
+    stringToChange = re.sub("ł", "l", stringToChange)
+    stringToChange = re.sub("Ł", "L", stringToChange)
+    stringToChange = re.sub("ń", "n", stringToChange)
+    stringToChange = re.sub("ň", "n", stringToChange)
+    stringToChange = re.sub("Ö", "O", stringToChange)
+    stringToChange = re.sub("ö", "o", stringToChange)
+    stringToChange = re.sub("ó", "o", stringToChange)
+    stringToChange = re.sub("ő", "o", stringToChange)
+    stringToChange = re.sub("ř", "r", stringToChange)
+    stringToChange = re.sub("Ř", "R", stringToChange)
+    stringToChange = re.sub("ś", "s", stringToChange)
+    stringToChange = re.sub("Ś", "S", stringToChange)
+    stringToChange = re.sub("š", "s", stringToChange)
+    stringToChange = re.sub("Š", "S", stringToChange)
+    stringToChange = re.sub("ť", "t", stringToChange)
+    stringToChange = re.sub("Ť", "T", stringToChange)
+    stringToChange = re.sub("ü", "u", stringToChange)
+    stringToChange = re.sub("Ú", "U", stringToChange)
+    stringToChange = re.sub("ú", "u", stringToChange)
+    stringToChange = re.sub("ů", "u", stringToChange)
+    stringToChange = re.sub("ý", "y", stringToChange)
+    stringToChange = re.sub("ż", "z", stringToChange)
+    stringToChange = re.sub("ź", "z", stringToChange)
+    stringToChange = re.sub("ž", "z", stringToChange)
+    stringToChange = re.sub("Ž", "Z", stringToChange)
+    return stringToChange
+
+def prefix2ToEnd(stringToChange):
+    if re.search("^([A-Z][A-Z])( )(.*)$", stringToChange):        
+        stringToChange = re.findall("^([A-Z][A-Z])( )(.*)$", stringToChange)[0][2] + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
+        print(stringToChange)
+    return stringToChange
+
 if __name__ == '__main__':
-    # setDB(dropTable = False, createTable = False, deleteAllRows = False)
-    # deleteOldOdds()
-    # scrapNIKE()
-    # scrapTIPSPORT()
-    # scrapFORTUNA()
+    setDB(dropTable = False, createTable = False, deleteAllRows = True)
+    deleteOldOdds()
+    scrapNIKE()
+    scrapTIPSPORT()
+    scrapFORTUNA()
     scrapDOXXBET()
-    # setParticipantEinDB()
-    # findBets()
+    setParticipantEinDB()
+    findBets()
+
