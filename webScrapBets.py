@@ -207,12 +207,6 @@ def setParticipantEinDB():
     # con.commit()
     # print("Repaired prefix", res.rowcount, "participants")
 
-    res = con.execute("""UPDATE e_participants
-            SET s_new_name = trim(s_new_name)
-            where e_participants.s_new_name like ' % '""")
-    con.commit()
-    print("Repaired trim", res.rowcount, "participants")
-
     cur = con.execute("""SELECT n_id_participants, s_new_name FROM e_participants""")
     for row in cur:
         changeNewName = changeDiacritics(row[1])
@@ -226,14 +220,20 @@ def setParticipantEinDB():
 
     cur = con.execute("""SELECT n_id_participants, s_new_name FROM e_participants""")
     for row in cur:
-        changeNewName = prefix2ToEnd(row[1])
-        if row[1] != prefix2ToEnd(row[1]):
+        changeNewName = deletePrefix(row[1])
+        if row[1] != deletePrefix(row[1]):
             idParticipants = row[0]
             con.execute("""UPDATE e_participants
                 SET s_new_name = ?
                 where e_participants.n_id_participants = ?""", (changeNewName, idParticipants))
     con.commit()
     print("Repaired prefix2")
+
+    res = con.execute("""UPDATE e_participants
+            SET s_new_name = trim(s_new_name)
+            where e_participants.s_new_name like ' %' Or e_participants.s_new_name like '% '""")
+    con.commit()
+    print("Repaired trim", res.rowcount, "participants")
 
     con.close()
 
@@ -337,14 +337,15 @@ def changeDiacritics(stringToChange):
     stringToChange = re.sub("Ž", "Z", stringToChange)
     return stringToChange
 
-def prefix2ToEnd(stringToChange):
+def deletePrefix(stringToChange):
     if re.search("^([A-Z][A-Z])( )(.*)$", stringToChange):        
-        stringToChange = re.findall("^([A-Z][A-Z])( )(.*)$", stringToChange)[0][2] + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
-        print(stringToChange)
+        stringToChange = re.findall("^([A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
+    if re.search("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange):        
+        stringToChange = re.findall("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
     return stringToChange
 
 if __name__ == '__main__':
-    setDB(dropTable = False, createTable = False, deleteAllRows = True)
+    setDB(dropTable = True, createTable = True, deleteAllRows = True)
     deleteOldOdds()
     scrapNIKE()
     scrapTIPSPORT()
