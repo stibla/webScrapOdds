@@ -2,16 +2,19 @@ import json
 import sqlite3
 import re
 from selenium import webdriver
+from selenium.webdriver import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from datetime import datetime
 from urllib.request import Request, urlopen
+import time
 
-def setDB(dropTable = False, createTable = False, deleteAllRows = False):
+def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
     con = sqlite3.connect("data.db")
-    # cur = con.cursor()
-    if dropTable: 
+    if dropTables: 
         con.execute("DROP TABLE IF EXISTS odds")
         con.execute("DROP TABLE IF EXISTS e_participants")
-    if createTable: 
+    if createTables: 
         con.execute("""CREATE TABLE IF NOT EXISTS odds(
                     n_id_odd INTEGER PRIMARY KEY AUTOINCREMENT, 
                     s_betOffice TEXT, 
@@ -33,7 +36,7 @@ def setDB(dropTable = False, createTable = False, deleteAllRows = False):
                     s_old_name TEXT,
                     s_new_name TEXT, 
                     s_date_create TEXT)""")
-    if deleteAllRows: con.execute("DELETE FROM odds")
+    if deleteAllRowsOdds: con.execute("DELETE FROM odds")
     con.commit()
     con.close()
 
@@ -90,7 +93,9 @@ def scrapTIPSPORT():
             "https://www.tipsport.sk/kurzy/hokej-23?limit=825",
             "https://www.tipsport.sk/kurzy/tenis-43?limit=825",
             "https://www.tipsport.sk/kurzy/basketbal-7")
-    driver = webdriver.Chrome('C:/Users/Administrator/AppData/Local/Programs/Python/Python310/chromedriver.exe')
+    # driver = webdriver.Chrome('C:/Users/Administrator/AppData/Local/Programs/Python/Python310/chromedriver.exe')
+    options = ChromeOptions()
+    driver = webdriver.Chrome(options=options)
     for url in urls:
         dataDB = []        
         driver.get(url) #  ?limit=325
@@ -189,6 +194,16 @@ def scrapDOXXBET():
             dataDB.append((str(e['EventChanceTypeID']), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[0]), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[1]), e['EventName'], e['EventDate'][0:10], e['EventDate'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
             
     saveToDB(dataDB, "DOXXBET")
+
+def scrapTIPOS():
+    options = ChromeOptions()
+    driver = webdriver.Chrome(options=options)
+    driver.get("https://tipkurz.etipos.sk/zapasy/28?categoryId=28") #  ?limit=325
+    element = driver.find_element(By.ID, "reactFooterWrapper")
+    ActionChains(driver).scroll_to_element(element).perform()
+    time.sleep(30)
+    with open('tipos.html', 'w', encoding="utf-8") as f:
+        f.write(driver.page_source)
 
 def setParticipantEinDB():
     con = sqlite3.connect("data.db")
@@ -345,12 +360,13 @@ def deletePrefix(stringToChange):
     return stringToChange
 
 if __name__ == '__main__':
-    setDB(dropTable = True, createTable = True, deleteAllRows = True)
+    setDB(dropTables = False, createTables = False, deleteAllRowsOdds = True)
     deleteOldOdds()
     scrapNIKE()
     scrapTIPSPORT()
     scrapFORTUNA()
     scrapDOXXBET()
+    scrapTIPOS()
     setParticipantEinDB()
     findBets()
 
