@@ -74,12 +74,19 @@ def scrapNIKE():
                 participant2 = b['participants'][1]
                 for j in b['selectionGrid']:
                     for k in j:
-                        if 'odds' in k and k['row'] == 0 and k['col'] == 0 and k['odds'] > 1 : n_1 = k['odds']
-                        if 'odds' in k and k['row'] == 0 and k['col'] == 1 and k['odds'] > 1 : n_X = k['odds']
-                        if 'odds' in k and k['row'] == 0 and k['col'] == 2 and k['odds'] > 1 : n_2 = k['odds']
-                        if 'odds' in k and k['row'] == 1 and k['col'] == 0 and k['odds'] > 1 : n_1X = k['odds']
-                        if 'odds' in k and k['row'] == 1 and k['col'] == 1 and k['odds'] > 1 : n_12 = k['odds']
-                        if 'odds' in k and k['row'] == 1 and k['col'] == 2 and k['odds'] > 1 : n_X2 = k['odds']
+                        # if 'odds' in k and k['row'] == 0 and k['col'] == 0 and k['odds'] > 1 : n_1 = k['odds']
+                        # if 'odds' in k and k['row'] == 0 and k['col'] == 1 and k['odds'] > 1 : n_X = k['odds']
+                        # if 'odds' in k and k['row'] == 0 and k['col'] == 2 and k['odds'] > 1 : n_2 = k['odds']
+                        # if 'odds' in k and k['row'] == 1 and k['col'] == 0 and k['odds'] > 1 : n_1X = k['odds']
+                        # if 'odds' in k and k['row'] == 1 and k['col'] == 1 and k['odds'] > 1 : n_12 = k['odds']
+                        # if 'odds' in k and k['row'] == 1 and k['col'] == 2 and k['odds'] > 1 : n_X2 = k['odds']
+                        if 'odds' in k and k['odds'] > 1:
+                            if k['name'] == participant1: n_1 = k['odds']
+                            if k['name'] == "remíza": n_X = k['odds']
+                            if k['name'] == participant2: n_2 = k['odds']
+                            if k['name'] == "1X": n_1X = k['odds']
+                            if k['name'] == "12": n_12 = k['odds']
+                            if k['name'] == "X2": n_X2 = k['odds']
                 if not(n_1 is None and n_X is None and n_2 is None and n_1X is None and n_12 is None and n_X2 is None):
                     dataDB.append((b['betId'], participant1, participant2, b['participantOrder'], b['expirationTime'][0:10], b['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "NIKE")
@@ -235,14 +242,14 @@ def setParticipantEinDB():
 
     cur = con.execute("""SELECT n_id_participants, s_new_name FROM e_participants""")
     for row in cur:
-        changeNewName = deletePrefix(row[1])
-        if row[1] != deletePrefix(row[1]):
+        changeNewName = deletePrefixSufix(row[1])
+        if row[1] != deletePrefixSufix(row[1]):
             idParticipants = row[0]
             con.execute("""UPDATE e_participants
                 SET s_new_name = ?
                 where e_participants.n_id_participants = ?""", (changeNewName, idParticipants))
     con.commit()
-    print("Repaired prefix2")
+    print("Repaired prefix sufix")
 
     res = con.execute("""UPDATE e_participants
             SET s_new_name = trim(s_new_name)
@@ -279,14 +286,15 @@ def findBets():
                 case when COUNT(1) > 1 and max(n_1) is not null and max(n_X2) is not null then 100/max(n_1) + 100/max(n_X2) end as koef_1_X2,
                 case when COUNT(1) > 1 and max(n_2) is not null and max(n_1X) is not null then 100/max(n_2) + 100/max(n_1X) end as koef_2_1X,
                 case when COUNT(1) > 1 and max(n_X) is not null and max(n_12) is not null then 100/max(n_X) + 100/max(n_12) end as koef_X_12,
-                case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2
+                case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2,
+				case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is null and max(n_2) is not null then 100/max(n_1) + 100/max(n_2) end as koef_1_2
                 FROM (SELECT s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, min(n_1) n_1,
 					min(n_X) n_X, min(n_2) n_2, min(n_1X) n_1X, min(n_12) n_12, min(n_X2) n_X2
 					FROM odds GROUP BY s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime) min_odds
 					, e_participants as part1,  e_participants as part2
                 where min_odds.s_participant1 = part1.s_old_name and min_odds.s_participant2 = part2.s_old_name
                 GROUP BY part1.s_new_name, part2.s_new_name, s_expirationDate, s_expirationTime
-                ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100)) As BestOdds,
+                ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100 or koef_1_2 < 100)) As BestOdds,
         (SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.*
                 FROM odds, e_participants as part1, e_participants as part2
                 where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name) as chngOdds
@@ -320,6 +328,7 @@ def changeDiacritics(stringToChange):
     stringToChange = re.sub("ė", "e", stringToChange)
     stringToChange = re.sub("é", "e", stringToChange)
     stringToChange = re.sub("ě", "e", stringToChange)
+    stringToChange = re.sub("ë", "e", stringToChange)
     stringToChange = re.sub("ę", "e", stringToChange)
     stringToChange = re.sub("Í", "I", stringToChange)
     stringToChange = re.sub("í", "i", stringToChange)
@@ -342,7 +351,7 @@ def changeDiacritics(stringToChange):
     stringToChange = re.sub("ť", "t", stringToChange)
     stringToChange = re.sub("Ť", "T", stringToChange)
     stringToChange = re.sub("ü", "u", stringToChange)
-    stringToChange = re.sub("Ú", "U", stringToChange)
+    stringToChange = re.sub("Ú", "U", stringToChange)  # Ü
     stringToChange = re.sub("ú", "u", stringToChange)
     stringToChange = re.sub("ů", "u", stringToChange)
     stringToChange = re.sub("ý", "y", stringToChange)
@@ -352,11 +361,13 @@ def changeDiacritics(stringToChange):
     stringToChange = re.sub("Ž", "Z", stringToChange)
     return stringToChange
 
-def deletePrefix(stringToChange):
+def deletePrefixSufix(stringToChange):
     if re.search("^([A-Z][A-Z])( )(.*)$", stringToChange):        
         stringToChange = re.findall("^([A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
     if re.search("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange):        
         stringToChange = re.findall("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
+    if re.search("^(.*)( )([A-Z][A-Z])$", stringToChange):        
+        stringToChange = re.findall("^(.*)( )([A-Z][A-Z])$", stringToChange)[0][0] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]    
     return stringToChange
 
 if __name__ == '__main__':
@@ -369,4 +380,5 @@ if __name__ == '__main__':
     scrapTIPOS()
     setParticipantEinDB()
     findBets()
-
+    
+ 
