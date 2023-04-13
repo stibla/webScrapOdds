@@ -192,10 +192,30 @@ def scrapTIPOS():
     driver = webdriver.Chrome(options=options)
     driver.get("https://tipkurz.etipos.sk/zapasy/28?categoryId=28") #  ?limit=325
     element = driver.find_element(By.ID, "reactFooterWrapper")
-    ActionChains(driver).scroll_to_element(element).perform()
-    time.sleep(30)
-    with open('tipos.html', 'w', encoding="utf-8") as f:
-        f.write(driver.page_source)
+    for i in range(10):
+        ActionChains(driver).scroll_to_element(element).perform()
+        time.sleep(5)
+    
+    # with open('tipos.html', 'w', encoding="utf-8") as f:
+    #     f.write(driver.page_source)
+
+    listMatch = re.findall("(<div data-test-role=\"event-list__item\".*?(?=<div data-test-role=\"event-list__item))", driver.page_source)
+    
+    # f = open("tipos.html", "r", encoding="utf8")
+    # listMatch = re.findall("(<div data-test-role=\"event-list__item\".*?(?=<div data-test-role=\"event-list__item))", f.read())
+
+    dataDB = [] 
+    for lm in listMatch:
+        match = re.findall("event-list__item__detail-link\">([^<]*)</div>.*?<span id=\"eventicon_(\d*).*?v-center date-col pt-3\">(\d+.\d+.\d+)<br>(\d+:\d+)</div>", lm)
+        odds = re.findall("class=\"rate-label text-truncate\">(.*?)</div><div class=\"rate d-flex align-items-center justify-content-center\">(\d+\,\d+)</div>", lm)
+        if len(odds) > 0 and len(match[0][0].split(" - ", 1)) > 1:
+            n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
+            for o in odds:
+                if o[0] == match[0][0].split(" - ", 1)[0]: n_1 = re.sub(",", ".", o[1])
+                if o[0] == "Remíza": n_X = re.sub(",", ".", o[1])
+                if o[0] == match[0][0].split(" - ", 1)[1]: n_2 = re.sub(",", ".", o[1])
+            dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+    saveToDB(dataDB, "TIPOS")
 
 def setParticipantEinDB():
     con = sqlite3.connect("data.db")
@@ -356,12 +376,12 @@ def deletePrefixSufix(stringToChange):
     return stringToChange
 
 if __name__ == '__main__':
-    setDB(dropTables = False, createTables = False, deleteAllRowsOdds = True)
-    deleteOldOdds()
-    scrapNIKE()
-    scrapTIPSPORT()
-    scrapFORTUNA()
-    scrapDOXXBET()
+    # setDB(dropTables = False, createTables = False, deleteAllRowsOdds = True)
+    # deleteOldOdds()
+    # scrapNIKE()
+    # scrapTIPSPORT()
+    # scrapFORTUNA()
+    # scrapDOXXBET()
     scrapTIPOS()
     setParticipantEinDB()
     findBets()
