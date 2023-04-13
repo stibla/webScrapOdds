@@ -170,7 +170,7 @@ def scrapDOXXBET():
     
     for e in data_json['EventChanceTypes']:
         n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
-        if e['EventChanceTypeID'] != 0 and e['LiveBettingView'] != 0 and len(e['EventName'].split(" vs. ", 1)) > 1:
+        if e['EventChanceTypeID'] != 0 and e['LiveBettingView'] != -1 and len(e['EventName'].split(" vs. ", 1)) > 1:
             if str(e['EventChanceTypeID']) + '_1' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_1']: 
                 if data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate'] > 1: n_1 = data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate']
             if str(e['EventChanceTypeID']) + '_X' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_X']: 
