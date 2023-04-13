@@ -163,29 +163,14 @@ def scrapDOXXBET():
     data_json = json.loads(urlopen(req).read())
     
     # with open('doxxbet.json', 'w') as f:
-    #     f.write(json.dumps(data_json))   json.dumps(, ensure_ascii=False)
+        # f.write(json.dumps(data_json)) 
     # data_json = json.load(open('doxxbet.json', errors='ignore'))
-
-    # json.loads() method can be used to parse a valid JSON string and convert it into a Python Dictionary. 
-    # It is mainly used for deserializing native string, byte, or byte array which consists of JSON data 
-    # into Python Dictionary.
-
-    # json.load() takes a file object and returns the json object. A JSON object contains data 
-    # in the form of key/value pair. The keys are strings and the values are the JSON types. 
-    # Keys and values are separated by a colon. Each entry (key/value pair) is separated by a comma
-
-    # json.dumps() function will convert a subset of Python objects into a json string. 
-    # Not all objects are convertible and you may need to create a dictionary of data you wish 
-    # to expose before serializing to JSON.
-
-    # json.dump() json module in Python module provides a method called dump() which converts the 
-    # Python objects into appropriate json objects. It is a slight variant of dumps() method.
 
     dataDB = []
     
     for e in data_json['EventChanceTypes']:
         n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
-        if e['EventChanceTypeID'] != 0 and len(e['EventName'].split(" vs. ", 1)) > 1:
+        if e['EventChanceTypeID'] != 0 and e['LiveBettingView'] != 0 and len(e['EventName'].split(" vs. ", 1)) > 1:
             if str(e['EventChanceTypeID']) + '_1' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_1']: 
                 if data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate'] > 1: n_1 = data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate']
             if str(e['EventChanceTypeID']) + '_X' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_X']: 
