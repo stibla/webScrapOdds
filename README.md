@@ -1,4 +1,4 @@
-# webScrabBets
+# webScrapBets
 web scraper to scrap bets form BetOffice web pages and finding best odds
 
 # Depencies
