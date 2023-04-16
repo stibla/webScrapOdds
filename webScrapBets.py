@@ -396,6 +396,35 @@ def setParticipantEinDB():
     con.commit()
     print("Repaired trim", res.rowcount, "participants")
 
+    res = con.execute("""INSERT INTO e_participants_deleted(n_id_participants, s_old_name, s_new_name, s_date_create) 
+            SELECT n_id_participants, s_old_name, s_new_name, s_date_create FROM e_participants
+			WHERE e_participants.s_old_name not in (SELECT odds.s_participant1 from odds)
+			AND e_participants.s_old_name not in (SELECT odds.s_participant2 from odds)""")
+    con.commit()
+    print("Inserted nonuse ", res.rowcount, "participants")
+					
+    res = con.execute("""DELETE FROM e_participants
+            WHERE e_participants.s_old_name not in (SELECT odds.s_participant1 from odds)
+            AND e_participants.s_old_name not in (SELECT odds.s_participant2 from odds)""")
+    con.commit()
+    print("Deleteted nonuse ", res.rowcount, "participants")
+
+    res = con.execute("""UPDATE e_participants
+            SET s_new_name = (SELECT e_participants_deleted.s_new_name
+                            FROM e_participants_deleted
+                            WHERE e_participants.s_old_name = e_participants_deleted.s_old_name)
+            WHERE EXISTS (SELECT e_participants_deleted.s_new_name
+                            FROM e_participants_deleted
+                            WHERE e_participants.s_old_name = e_participants_deleted.s_old_name)""")
+    con.commit()
+    print("Update new ", res.rowcount, "participants")
+
+    res = con.execute("""DELETE FROM e_participants_deleted
+            WHERE e_participants_deleted.s_old_name in (SELECT odds.s_participant1 from odds)
+            OR e_participants_deleted.s_old_name in (SELECT odds.s_participant2 from odds)""")
+    con.commit()
+    print("Deleteted uses ", res.rowcount, "participants")
+
     con.close()
 
 def findBets():
@@ -520,8 +549,7 @@ def deletePrefixSufix(stringToChange):
 if __name__ == '__main__':
     setDB(dropTables = False, createTables = False, deleteAllRowsOdds = True)
     deleteOldOdds()
-    scrapFORTUNA()
-    if False:
+    if True:
         scrapNIKE()
         scrapTIPSPORT()
         scrapFORTUNA()
