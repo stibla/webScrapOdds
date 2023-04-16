@@ -15,8 +15,12 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
         con.execute("DROP TRIGGER IF EXISTS odds_delete_history")
         con.execute("DROP TRIGGER IF EXISTS odds_update_history")
         con.execute("DROP TABLE IF EXISTS odds")
-        # con.execute("DROP TABLE IF EXISTS e_participants")
         con.execute("DROP TABLE IF EXISTS odds_h");
+        con.execute("DROP TRIGGER IF EXISTS e_participants_delete_history");
+        con.execute("DROP TRIGGER IF EXISTS e_participants_update_history");
+        # con.execute("DROP TABLE IF EXISTS e_participants")
+        con.execute("DROP TABLE IF EXISTS e_participants_h");
+
     if createTables:
         con.execute("""CREATE TABLE IF NOT EXISTS odds(
                     n_id_odd INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,6 +90,41 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
                     s_old_name TEXT,
                     s_new_name TEXT, 
                     s_date_create TEXT)""")
+        con.execute("""CREATE TABLE IF NOT EXISTS e_participants_h (
+					_rowid INTEGER,
+                    n_id_participants INTEGER,
+                    s_old_name TEXT,
+                    s_new_name TEXT, 
+                    s_date_create TEXT,
+					_version INTEGER,
+					_updated TEXT,
+					_IUD)""")
+        con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_delete_history
+                    AFTER DELETE ON e_participants
+                    BEGIN
+                        INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, s_date_create, _version, _updated, _IUD)
+                        VALUES (
+                            old.rowid,
+                            old.n_id_participants, old.s_old_name, old.s_new_name, old.s_date_create,
+                            (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+                            datetime('now', 'localtime'),
+                            "DELETE"
+                        );
+                    END""")
+        con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_update_history
+                    AFTER UPDATE ON e_participants
+                    FOR EACH ROW
+                    BEGIN
+                        INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, s_date_create, _version, _updated, _IUD)
+                        VALUES (
+                            old.rowid,
+                            old.n_id_participants, old.s_old_name, old.s_new_name, old.s_date_create,
+                            (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+                            datetime('now', 'localtime'),
+                            "UPDATE"
+                        );
+                    END""")
+        
     if deleteAllRowsOdds: con.execute("DELETE FROM odds")
     con.commit()
     con.close()
