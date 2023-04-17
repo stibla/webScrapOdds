@@ -150,7 +150,7 @@ def saveToDB(dataDB, betOffice):
 def scrapNIKE():
     sports = ("futbal",
             "hokej",
-            "tenis",
+            # "tenis",
             "basketbal")
     for sport in sports:
         hasMoreBets = True
@@ -194,7 +194,7 @@ def scrapNIKE():
 def scrapTIPSPORT():
     urls = ("https://www.tipsport.sk/kurzy/futbal-16?limit=825",
             "https://www.tipsport.sk/kurzy/hokej-23?limit=825",
-            "https://www.tipsport.sk/kurzy/tenis-43?limit=825",
+           # "https://www.tipsport.sk/kurzy/tenis-43?limit=825",
             "https://www.tipsport.sk/kurzy/basketbal-7")
     options = ChromeOptions()
     driver = webdriver.Chrome(options=options)     # driver = webdriver.Chrome('C:/Users/Administrator/AppData/Local/Programs/Python/Python310/chromedriver.exe')
@@ -222,7 +222,7 @@ def scrapTIPSPORT():
 def scrapFORTUNA():
     urls = ("https://www.ifortuna.sk/bets/ajax/loadmoresport/futbal?timeTo=&rateFrom=&rateTo=&date=&pageSize=100&page=",
             "https://www.ifortuna.sk/bets/ajax/loadmoresport/hokej?timeTo=&rateFrom=&rateTo=&date=&pageSize=100&page=",
-            "https://www.ifortuna.sk/bets/ajax/loadmoresport/tenis?timeTo=&rateFrom=&rateTo=&date=&pageSize=100&page=",
+          #  "https://www.ifortuna.sk/bets/ajax/loadmoresport/tenis?timeTo=&rateFrom=&rateTo=&date=&pageSize=100&page=",
             "https://www.ifortuna.sk/bets/ajax/loadmoresport/basketbal?timeTo=&rateFrom=&rateTo=&date=&pageSize=100&page=")
     for urlTMP in urls:
         for page in range(30):
@@ -266,7 +266,7 @@ def scrapDOXXBET():
     # futbal 54,1  hokej 53, 4     basketbal 50, 2,   tenis 58, 5
     for e in data_json['EventChanceTypes']:
         n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
-        if e['EventChanceTypeID'] != 0 and e['LiveBettingView'] != -1 and len(e['EventName'].split(" vs. ", 1)) > 1 and (e['BetradarSportID'] == 1 or e['BetradarSportID'] == 2 or e['BetradarSportID'] == 4 or e['BetradarSportID'] == 5):
+        if e['EventChanceTypeID'] != 0 and e['LiveBettingView'] != -1 and len(e['EventName'].split(" vs. ", 1)) > 1 and (e['BetradarSportID'] == 1 or e['BetradarSportID'] == 2 or e['BetradarSportID'] == 4): # or e['BetradarSportID'] == 5):
             if str(e['EventChanceTypeID']) + '_1' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_1']: 
                 if data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate'] > 1: n_1 = data_json['Odds'][str(e['EventChanceTypeID']) + '_1']['OddsRate']
             if str(e['EventChanceTypeID']) + '_X' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_X']: 
@@ -286,7 +286,7 @@ def scrapDOXXBET():
 def scrapTIPOS():
     urls = ("https://tipkurz.etipos.sk/zapasy/28?categoryId=28",
             "https://tipkurz.etipos.sk/zapasy/31?categoryId=31",
-            "https://tipkurz.etipos.sk/zapasy/2?categoryId=2",
+           # "https://tipkurz.etipos.sk/zapasy/2?categoryId=2",
             "https://tipkurz.etipos.sk/zapasy/5?categoryId=5")
     options = ChromeOptions()
     driver = webdriver.Chrome(options=options)
@@ -313,13 +313,14 @@ def scrapTIPOS():
                     if o[0] == match[0][0].split(" - ", 1)[0]: n_1 = re.sub(",", ".", o[1])
                     if o[0] == "Remíza": n_X = re.sub(",", ".", o[1])
                     if o[0] == match[0][0].split(" - ", 1)[1]: n_2 = re.sub(",", ".", o[1])
-                dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                if not(n_1 is None and n_X is None and n_2 is None):
+                    dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "TIPOS")
 
 def scrapSYNNOTTIP():
     urls = ("https://sport.synottip.sk/zapasy/28?categoryId=28",
             "https://sport.synottip.sk/zapasy/31?categoryId=31",
-            "https://sport.synottip.sk/zapasy/2?categoryId=2",
+          #  "https://sport.synottip.sk/zapasy/2?categoryId=2",
             "https://sport.synottip.sk/zapasy/5?categoryId=5")
     options = ChromeOptions()
     driver = webdriver.Chrome(options=options)
@@ -348,7 +349,8 @@ def scrapSYNNOTTIP():
                     if o[0] == match[0][0].split(" - ", 1)[0]: n_1 = re.sub(",", ".", o[1])
                     if o[0] == "Remíza": n_X = re.sub(",", ".", o[1])
                     if o[0] == match[0][0].split(" - ", 1)[1]: n_2 = re.sub(",", ".", o[1])
-                dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                if not(n_1 is None and n_X is None and n_2 is None):
+                    dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "SYNNOTTIP")
 
 def setParticipantEinDB():
