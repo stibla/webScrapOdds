@@ -16,9 +16,11 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
         con.execute("DROP TRIGGER IF EXISTS odds_update_history")
         con.execute("DROP TABLE IF EXISTS odds")
         con.execute("DROP TABLE IF EXISTS odds_h");
+        con.execute("DROP TABLE IF EXISTS bindings");
         con.execute("DROP TRIGGER IF EXISTS e_participants_delete_history");
         con.execute("DROP TRIGGER IF EXISTS e_participants_update_history");
-        # con.execute("DROP TABLE IF EXISTS e_participants")
+        con.execute("DROP TABLE IF EXISTS e_participants")
+        con.execute("DROP TABLE IF EXISTS e_participants_deleted")
         con.execute("DROP TABLE IF EXISTS e_participants_h");
 
     if createTables:
@@ -29,6 +31,8 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
                     s_participant1 TEXT,
                     s_participant2 TEXT,
                     s_participantOrder TEXT,
+                    s_participantOrderMatch TEXT,
+                    n_matchRatio REAL,
                     s_expirationDate TEXT,
                     s_expirationTime TEXT,
                     n_1 REAL,
@@ -38,93 +42,108 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
                     n_12 REAL,
                     n_X2 REAL,
                     s_date_create TEXT)""")
-        con.execute("""CREATE TABLE IF NOT EXISTS odds_h(
-					_rowid INTEGER,
-                    n_id_odd INTEGER,
-                    s_betOffice TEXT,
-                    s_betId TEXT,
-                    s_participant1 TEXT,
-                    s_participant2 TEXT,
-                    s_participantOrder TEXT,
-                    s_expirationDate TEXT,
-                    s_expirationTime TEXT,
-                    n_1 REAL,
-                    n_X REAL,
-                    n_2 REAL,
-                    n_1X REAL,
-                    n_12 REAL,
-                    n_X2 REAL,
-                    s_date_create TEXT,
-					_version INTEGER,
-					_updated TEXT,
-					_IUD)""")	
-        con.execute("""CREATE TRIGGER IF NOT EXISTS odds_delete_history
-                AFTER DELETE ON odds
-                BEGIN
-                    INSERT INTO odds_h (_rowid, n_id_odd, s_betOffice, s_betId, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, 
-                                    s_date_create, _version, _updated, _IUD)
-                    VALUES (
-                        old.rowid,
-                        old.n_id_odd, old.s_betOffice, old.s_betId, old.s_participant1, old.s_participant2, old.s_participantOrder, old.s_expirationDate, old.s_expirationTime, old.n_1, old.n_X, old.n_2, old.n_1X, old.n_12, old.n_X2, old.s_date_create,
-                        (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
-                        datetime('now', 'localtime'),
-                        'DELETE'
-                    );
-                END""")        		
-        con.execute("""CREATE TRIGGER IF NOT EXISTS odds_update_history
-                AFTER UPDATE ON odds
-                FOR EACH ROW
-                BEGIN
-                    INSERT INTO odds_h (_rowid, n_id_odd, s_betOffice, s_betId, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, 
-                                    s_date_create, _version, _updated, _IUD)
-                    VALUES (
-                        old.rowid,
-                        old.n_id_odd, old.s_betOffice, old.s_betId, old.s_participant1, old.s_participant2, old.s_participantOrder, old.s_expirationDate, old.s_expirationTime, old.n_1, old.n_X, old.n_2, old.n_1X, old.n_12, old.n_X2, old.s_date_create,
-                        (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
-                        datetime('now', 'localtime'),
-                        'UPDATE'
-                    );
-                END""")
-        con.execute("""CREATE TABLE IF NOT EXISTS e_participants (
-                    n_id_participants INTEGER PRIMARY KEY AUTOINCREMENT,
-                    s_old_name TEXT,
-                    s_new_name TEXT, 
-                    s_date_create TEXT)""")
-        con.execute("""CREATE TABLE IF NOT EXISTS e_participants_h (
-					_rowid INTEGER,
-                    n_id_participants INTEGER,
-                    s_old_name TEXT,
-                    s_new_name TEXT, 
-                    s_date_create TEXT,
-					_version INTEGER,
-					_updated TEXT,
-					_IUD)""")
-        con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_delete_history
-                    AFTER DELETE ON e_participants
-                    BEGIN
-                        INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, s_date_create, _version, _updated, _IUD)
-                        VALUES (
-                            old.rowid,
-                            old.n_id_participants, old.s_old_name, old.s_new_name, old.s_date_create,
-                            (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
-                            datetime('now', 'localtime'),
-                            "DELETE"
-                        );
-                    END""")
-        con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_update_history
-                    AFTER UPDATE ON e_participants
-                    FOR EACH ROW
-                    BEGIN
-                        INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, s_date_create, _version, _updated, _IUD)
-                        VALUES (
-                            old.rowid,
-                            old.n_id_participants, old.s_old_name, old.s_new_name, old.s_date_create,
-                            (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
-                            datetime('now', 'localtime'),
-                            "UPDATE"
-                        );
-                    END""")
-        
+        # con.execute("""CREATE TABLE IF NOT EXISTS odds_h(
+		# 			_rowid INTEGER,
+        #             n_id_odd INTEGER,
+        #             s_betOffice TEXT,
+        #             s_betId TEXT,
+        #             s_participant1 TEXT,
+        #             s_participant2 TEXT,
+        #             s_participantOrder TEXT,
+        #             s_participantOrderMatch TEXT,
+        #             n_matchRatio REAL,
+        #             s_expirationDate TEXT,
+        #             s_expirationTime TEXT,
+        #             n_1 REAL,
+        #             n_X REAL,
+        #             n_2 REAL,
+        #             n_1X REAL,
+        #             n_12 REAL,
+        #             n_X2 REAL,
+        #             s_date_create TEXT,
+		# 			_version INTEGER,
+		# 			_updated TEXT,
+		# 			_IUD)""")	
+        # con.execute("""CREATE TRIGGER IF NOT EXISTS odds_delete_history
+        #         AFTER DELETE ON odds
+        #         BEGIN
+        #             INSERT INTO odds_h (_rowid, n_id_odd, s_betOffice, s_betId, s_participant1, s_participant2, s_participantOrder, s_participantOrderMatch, n_matchRatio, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, 
+        #                             s_date_create, _version, _updated, _IUD)
+        #             VALUES (
+        #                 old.rowid,
+        #                 old.n_id_odd, old.s_betOffice, old.s_betId, old.s_participant1, old.s_participant2, old.s_participantOrder, old.s_participantOrderMatch, old.n_matchRatio, old.s_expirationDate, old.s_expirationTime, old.n_1, old.n_X, old.n_2, old.n_1X, old.n_12, old.n_X2, old.s_date_create,
+        #                 (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+        #                 datetime('now', 'localtime'),
+        #                 'DELETE'
+        #             );
+        #         END""")        		
+        # con.execute("""CREATE TRIGGER IF NOT EXISTS odds_update_history
+        #         AFTER UPDATE ON odds
+        #         FOR EACH ROW
+        #         BEGIN
+        #             INSERT INTO odds_h (_rowid, n_id_odd, s_betOffice, s_betId, s_participant1, s_participant2, s_participantOrder, s_participantOrderMatch, n_matchRatio, s_expirationDate, s_expirationTime, n_1, n_X, n_2, n_1X, n_12, n_X2, 
+        #                             s_date_create, _version, _updated, _IUD)
+        #             VALUES (
+        #                 old.rowid,
+        #                 old.n_id_odd, old.s_betOffice, old.s_betId, old.s_participant1, old.s_participant2, old.s_participantOrder, old.s_participantOrderMatch, old.n_matchRatio, old.s_expirationDate, old.s_expirationTime, old.n_1, old.n_X, old.n_2, old.n_1X, old.n_12, old.n_X2, old.s_date_create,
+        #                 (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+        #                 datetime('now', 'localtime'),
+        #                 'UPDATE'
+        #             );
+        #         END""")
+        # con.execute("""CREATE TABLE IF NOT EXISTS bindings(
+        #             n_id_binding INTEGER PRIMARY KEY AUTOINCREMENT, 
+        #             n_id_odd1 INTEGER,
+        #             n_id_odd2 INTEGER,
+		# 			n_ratio REAL,
+		# 			s_date_create TEXT)""")
+        # con.execute("""CREATE TABLE IF NOT EXISTS e_participants (
+        #             n_id_participants INTEGER PRIMARY KEY AUTOINCREMENT,
+        #             s_old_name TEXT,
+        #             s_new_name TEXT, 
+        #             n_ratio REAL,
+        #             s_date_create TEXT)""")
+        # con.execute("""CREATE TABLE IF NOT EXISTS e_participants_deleted (
+        #             n_id_participants INTEGER PRIMARY KEY AUTOINCREMENT,
+        #             s_old_name TEXT,
+        #             s_new_name TEXT, 
+        #             n_ratio REAL,
+        #             s_date_create TEXT)""")
+        # con.execute("""CREATE TABLE IF NOT EXISTS e_participants_h (
+		# 			_rowid INTEGER,
+        #             n_id_participants INTEGER,
+        #             s_old_name TEXT,
+        #             s_new_name TEXT, 
+        #             n_ratio REAL,
+        #             s_date_create TEXT,
+		# 			_version INTEGER,
+		# 			_updated TEXT,
+		# 			_IUD)""")
+        # con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_delete_history
+        #             AFTER DELETE ON e_participants
+        #             BEGIN
+        #                 INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, n_ratio, s_date_create, _version, _updated, _IUD)
+        #                 VALUES (
+        #                     old.rowid,
+        #                     old.n_id_participants, old.s_old_name, old.s_new_name, old.n_ratio, old.s_date_create,
+        #                     (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+        #                     datetime('now', 'localtime'),
+        #                     "DELETE"
+        #                 );
+        #             END""")
+        # con.execute("""CREATE TRIGGER IF NOT EXISTS e_participants_update_history
+        #             AFTER UPDATE ON e_participants
+        #             FOR EACH ROW
+        #             BEGIN
+        #                 INSERT INTO e_participants_h (_rowid, n_id_participants, s_old_name, s_new_name, n_ratio, s_date_create, _version, _updated, _IUD)
+        #                 VALUES (
+        #                     old.rowid,
+        #                     old.n_id_participants, old.s_old_name, old.s_new_name, old.n_ratio, old.s_date_create,
+        #                     (SELECT COALESCE(MAX(_version), 0) from odds_h WHERE _rowid = old.rowid) + 1,
+        #                     datetime('now', 'localtime'),
+        #                     "UPDATE"
+        #                 );
+        #             END""")
     if deleteAllRowsOdds: con.execute("DELETE FROM odds")
     con.commit()
     con.close()
@@ -143,7 +162,7 @@ def saveToDB(dataDB, betOffice):
                             VALUES ('""" + betOffice + """', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))""", dataDB)
     con.commit()
     noOfrowCount = res.rowcount
-    print(betOffice + " - insert", noOfrowCount, "counts")    
+    print(betOffice + " - inserted", noOfrowCount, "counts")    
     con.close()
     return noOfrowCount
 
@@ -201,12 +220,16 @@ def scrapTIPSPORT():
     for url in urls:
         dataDB = []        
         driver.get(url) #  ?limit=325
-        # with open('tipsport.html', 'w') as f:
-        #     f.write(driver.page_source)
+
+        # with open('tipsport.html', 'w', encoding="utf-8") as f:
+        #     f.write(driver.page_source)      
+        # f = open("tipsport.html", "r", encoding="utf8")
+        # listMatch = re.findall("(<div class=\"o-matchRow\".*?<div class=\"o-matchRow__results\"></div></div>)", f.read())
+
         listMatch = re.findall("(<div class=\"o-matchRow\".*?<div class=\"o-matchRow__results\"></div></div>)", driver.page_source)
         for i in listMatch:
-            match = re.findall("<span data-m=\"(\d+)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d+.\d+.\d+)</span><span class=\"marL-leftS\">(\d+:\d+)", i)
-            odds = re.findall(".*?\|\|(1|1x|x|x2|2)\">.*?(?:(\d+\.\d+)|setPassive)", i)
+            match = re.findall("<span data-m=\"(\d+)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d+. ?\d+. ?\d+)</span><span class=\"marL-leftS\">(\d+:\d+)", i)
+            odds = re.findall(".*?\|\|(1|1x|x|x2|2)\".*?(?:(\d+\.\d+)|setPassive)", i)
             if len(odds) > 0 and len(match[0][1].split(" - ", 1)) > 1:
                 n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
                 for j in odds:
@@ -215,7 +238,7 @@ def scrapTIPSPORT():
                     if j[0] == 'x' and j[1] != '' and float(j[1]) > 1: n_X = j[1]
                     if j[0] == 'x2' and j[1] != '' and float(j[1]) > 1: n_X2 = j[1]
                     if j[0] == '2' and j[1] != '' and float(j[1]) > 1: n_2 = j[1]
-                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]), match[0][1], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%Y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]), match[0][1], datetime.strftime(datetime.strptime(re.sub(" ","", match[0][2]),"%d.%m.%Y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "TIPSPORT")
     driver.quit()
 
@@ -279,7 +302,7 @@ def scrapDOXXBET():
                 if data_json['Odds'][str(e['EventChanceTypeID']) + '_X2']['OddsRate'] > 1: n_X2 = data_json['Odds'][str(e['EventChanceTypeID']) + '_X2']['OddsRate']
             if str(e['EventChanceTypeID']) + '_12' in data_json['Odds'] and 'OddsRate' in data_json['Odds'][str(e['EventChanceTypeID']) + '_12']: 
                 if data_json['Odds'][str(e['EventChanceTypeID']) + '_12']['OddsRate'] > 1: n_12 = data_json['Odds'][str(e['EventChanceTypeID']) + '_12']['OddsRate']
-            dataDB.append((str(e['EventChanceTypeID']), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[0]), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[1]), e['EventName'], e['EventDate'][0:10], e['EventDate'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))   #  "SportID:"+ str(e['SportID']) + "BetradarSportID:"+ str(e['BetradarSportID']) + "-" + 
+            dataDB.append((str(e['EventChanceTypeID']), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[0]), re.sub(" \(.*\)", "", e['EventName'].split(" vs. ", 1)[1]), re.sub(" vs. "," - ", e['EventName']) , e['EventDate'][0:10], e['EventDate'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))   
             
     saveToDB(dataDB, "DOXXBET")
 
@@ -326,10 +349,13 @@ def scrapSYNNOTTIP():
     driver = webdriver.Chrome(options=options)
     for url in urls:
         driver.get(url) #  ?limit=325
-        element = driver.find_element(By.ID, "reactFooterWrapper")
-        for i in range(10):
-            ActionChains(driver).scroll_to_element(element).perform()
-            time.sleep(5)
+        try:
+            element = driver.find_element(By.ID, "reactFooterWrapper")
+            for i in range(10):                
+                ActionChains(driver).scroll_to_element(element).perform()                        
+                time.sleep(5)
+        except:
+            print("An exception occurred scrapSYNNOTTIP")   
         
         # with open('synottip.html', 'w', encoding="utf-8") as f:
         #     f.write(driver.page_source)
@@ -429,6 +455,49 @@ def setParticipantEinDB():
 
     con.close()
 
+def setBindings():
+    from difflib import SequenceMatcher
+    con = sqlite3.connect("data.db")
+
+    con.execute("""UPDATE odds
+                SET s_participantOrderMatch = NULL""");
+    con.commit()
+
+    cur = con.execute("""SELECT odds_1.s_betOffice s_betOffice1, odds_1.n_id_odd n_id_odd1, odds_1.s_participantOrder s_participantOrder1, odds_1.s_participant1 participant11, odds_1.s_participant2 participant21 
+        , odds_2.s_betOffice s_betOffice2, odds_2.n_id_odd n_id_odd2, odds_2.s_participantOrder s_participantOrder2, odds_2.s_participant1 participant12, odds_2.s_participant2 participant22
+        FROM odds As odds_1,  odds As odds_2
+        WHERE odds_2.s_expirationDate = odds_1.s_expirationDate and odds_2.s_expirationTime = odds_1.s_expirationTime 
+        and odds_1.s_betOffice <> odds_2.s_betOffice""")
+    dataDB = []
+    for row in cur:
+        ratio = SequenceMatcher(None, deletePrefixSufix(row[2]), deletePrefixSufix(row[7])).ratio()
+        ratio1 = SequenceMatcher(None, deletePrefixSufix(row[3]), deletePrefixSufix(row[8])).ratio()
+        ratio2 = SequenceMatcher(None, deletePrefixSufix(row[4]), deletePrefixSufix(row[9])).ratio()
+        if ratio > 0.5 and ratio1 > 0.5 and ratio2 > 0.5:
+            if (row[6], row[1], ratio) not in dataDB: 
+                dataDB.append((row[1], row[6], ratio)) 
+                con.execute("""UPDATE odds
+                    SET s_participantOrderMatch = ?,
+                    n_matchRatio = ?            
+                    where odds.n_id_odd = ?
+                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, row[6]))
+                con.execute("""UPDATE odds
+                    SET s_participantOrderMatch = ?,
+                    n_matchRatio = ?
+                    where odds.n_id_odd = ?
+                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, row[1]))
+                con.commit()
+        # print(row)
+    # res = con.executemany("""INSERT INTO bindings(n_id_odd1, n_id_odd2, n_ratio, s_date_create)
+    #                         VALUES (?, ?, ?, datetime('now', 'localtime'))""", dataDB)
+    # con.commit()
+    # noOfrowCount = res.rowcount
+    # print("Insert", noOfrowCount, "counts")  
+    
+    # con.commit()
+
+    con.close()
+
 def findBets():
     con = sqlite3.connect("data.db")
 
@@ -439,37 +508,63 @@ def findBets():
     for row in cur:
         print(row)
     
+    # cur = con.execute("""SELECT POCET, COUNT(1) POCTY FROM (
+    #     SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.s_expirationDate, odds.s_expirationTime, COUNT(1) POCET
+    #                     FROM odds, e_participants as part1, e_participants as part2
+    #                     where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name
+    #     GROUP BY part1.s_new_name, part2.s_new_name, odds.s_expirationDate, odds.s_expirationTime
+    #     ) GROUP BY POCET""")
     cur = con.execute("""SELECT POCET, COUNT(1) POCTY FROM (
-        SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.s_expirationDate, odds.s_expirationTime, COUNT(1) POCET
-                        FROM odds, e_participants as part1, e_participants as part2
-                        where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name
-        GROUP BY part1.s_new_name, part2.s_new_name, odds.s_expirationDate, odds.s_expirationTime
+        SELECT odds.s_participantOrderMatch, odds.s_expirationDate, odds.s_expirationTime, COUNT(1) POCET
+        FROM odds
+		WHERE odds.s_participantOrderMatch Is Not NULL
+        GROUP BY odds.s_participantOrderMatch, odds.s_expirationDate, odds.s_expirationTime
         ) GROUP BY POCET""")
     print("No of mergers:")
     for row in cur:
         print(row)
 
+    # cur = con.execute("""SELECT BestOdds.*, chngOdds.* from
+    #     (SELECT * FROM (
+    #         SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, s_expirationDate, s_expirationTime,  JULIANDAY(datetime(s_expirationDate || ' ' || s_expirationTime)) - JULIANDAY(datetime('now','localtime')) DiffToNow, COUNT(1), 
+    #             max(n_1) as max_1, max(n_X) as max_X, max(n_2) as max_2, max(n_1X) as max_1X, max(n_12) as max_12, max(n_X2) as max_X2,
+    #             case when COUNT(1) > 1 and max(n_1) is not null and max(n_X2) is not null then 100/max(n_1) + 100/max(n_X2) end as koef_1_X2,
+    #             case when COUNT(1) > 1 and max(n_2) is not null and max(n_1X) is not null then 100/max(n_2) + 100/max(n_1X) end as koef_2_1X,
+    #             case when COUNT(1) > 1 and max(n_X) is not null and max(n_12) is not null then 100/max(n_X) + 100/max(n_12) end as koef_X_12,
+    #             case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2,
+	# 			case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is null and max(n_2) is not null then 100/max(n_1) + 100/max(n_2) end as koef_1_2
+    #             FROM (SELECT s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, min(n_1) n_1,
+	# 				min(n_X) n_X, min(n_2) n_2, min(n_1X) n_1X, min(n_12) n_12, min(n_X2) n_X2
+	# 				FROM odds GROUP BY s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime) min_odds
+	# 				, e_participants as part1,  e_participants as part2
+    #             where min_odds.s_participant1 = part1.s_old_name and min_odds.s_participant2 = part2.s_old_name
+    #             GROUP BY part1.s_new_name, part2.s_new_name, s_expirationDate, s_expirationTime
+    #             ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100 or koef_1_2 < 100)) As BestOdds,
+    #     (SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.*
+    #             FROM odds, e_participants as part1, e_participants as part2
+    #             where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name) as chngOdds
+    #             where BestOdds.participant1 = chngOdds.participant1 and BestOdds.participant2 = chngOdds.participant2 and BestOdds.s_expirationDate = chngOdds.s_expirationDate 
+	# 			and BestOdds.s_expirationTime = chngOdds.s_expirationTime 
+    #         order by 1,2,3""")
     cur = con.execute("""SELECT BestOdds.*, chngOdds.* from
-        (SELECT * FROM (
-            SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, s_expirationDate, s_expirationTime,  JULIANDAY(datetime(s_expirationDate || ' ' || s_expirationTime)) - JULIANDAY(datetime('now','localtime')) DiffToNow, COUNT(1), 
+        (SELECT * FROM (SELECT s_participantOrderMatch, s_expirationDate, s_expirationTime,  
+			   JULIANDAY(datetime(s_expirationDate || ' ' || s_expirationTime)) - JULIANDAY(datetime('now','localtime')) DiffToNow, COUNT(1), 
                 max(n_1) as max_1, max(n_X) as max_X, max(n_2) as max_2, max(n_1X) as max_1X, max(n_12) as max_12, max(n_X2) as max_X2,
                 case when COUNT(1) > 1 and max(n_1) is not null and max(n_X2) is not null then 100/max(n_1) + 100/max(n_X2) end as koef_1_X2,
                 case when COUNT(1) > 1 and max(n_2) is not null and max(n_1X) is not null then 100/max(n_2) + 100/max(n_1X) end as koef_2_1X,
                 case when COUNT(1) > 1 and max(n_X) is not null and max(n_12) is not null then 100/max(n_X) + 100/max(n_12) end as koef_X_12,
                 case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is not null and max(n_2) is not null then 100/max(n_1) + 100/max(n_X) + 100/max(n_2) end as koef_1_X_2,
 				case when COUNT(1) > 1 and max(n_1) is not null and max(n_X) is null and max(n_2) is not null then 100/max(n_1) + 100/max(n_2) end as koef_1_2
-                FROM (SELECT s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime, min(n_1) n_1,
+                FROM (SELECT s_betOffice, s_participantOrderMatch, s_expirationDate, s_expirationTime, min(n_1) n_1,
 					min(n_X) n_X, min(n_2) n_2, min(n_1X) n_1X, min(n_12) n_12, min(n_X2) n_X2
 					FROM odds GROUP BY s_betOffice, s_participant1, s_participant2, s_participantOrder, s_expirationDate, s_expirationTime) min_odds
-					, e_participants as part1,  e_participants as part2
-                where min_odds.s_participant1 = part1.s_old_name and min_odds.s_participant2 = part2.s_old_name
-                GROUP BY part1.s_new_name, part2.s_new_name, s_expirationDate, s_expirationTime
-                ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100 or koef_1_2 < 100)) As BestOdds,
-        (SELECT part1.s_new_name as participant1, part2.s_new_name as participant2, odds.*
-                FROM odds, e_participants as part1, e_participants as part2
-                where odds.s_participant1 = part1.s_old_name and odds.s_participant2 = part2.s_old_name) as chngOdds
-                where BestOdds.participant1 = chngOdds.participant1 and BestOdds.participant2 = chngOdds.participant2 and BestOdds.s_expirationDate = chngOdds.s_expirationDate 
+                GROUP BY s_participantOrderMatch, s_expirationDate, s_expirationTime
+                ) WHERE (koef_1_X2 < 100 or koef_1_X2 < 100 or koef_2_1X < 100 or koef_X_12 < 100 or koef_1_X_2 < 100 or koef_1_2 < 100) and s_participantOrderMatch is not null) As BestOdds,
+        odds as chngOdds
+                where BestOdds.s_participantOrderMatch = chngOdds.s_participantOrderMatch 
+				and BestOdds.s_expirationDate = chngOdds.s_expirationDate 
 				and BestOdds.s_expirationTime = chngOdds.s_expirationTime 
+				and (BestOdds.max_1 = chngOdds.n_1 or BestOdds.max_X = chngOdds.n_X or BestOdds.max_2 = chngOdds.n_2 or BestOdds.max_12 = chngOdds.n_12 or BestOdds.max_X2 = chngOdds.n_X2)
             order by 1,2,3""")
     print("Result:")
     for row in cur:
@@ -534,31 +629,46 @@ def changeDiacritics(stringToChange):
     stringToChange = re.sub(" / ", "/", stringToChange)
     stringToChange = re.sub("  ", " ", stringToChange)
     stringToChange = re.sub("Al-", "Al ", stringToChange)
+    stringToChange = re.sub("Al ", "", stringToChange)
     stringToChange = re.sub("1. FC ", "", stringToChange)
+    stringToChange = re.sub(" City", "", stringToChange)
+    stringToChange = re.sub(" Utd.", "", stringToChange)
+    stringToChange = re.sub(" Town", "", stringToChange)
     return stringToChange
 
 def deletePrefixSufix(stringToChange):
+    stringToChange = changeDiacritics(stringToChange)
     if re.search("^([A-Z][A-Z])( )(.*)$", stringToChange):        
         stringToChange = re.findall("^([A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
     if re.search("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange):        
         stringToChange = re.findall("^([A-Z][A-Z][A-Z])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]         
     if re.search("^(.*)( )([A-Z][A-Z])$", stringToChange):        
         stringToChange = re.findall("^(.*)( )([A-Z][A-Z])$", stringToChange)[0][0] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]  
+    if re.search("^(.*)( )([U][1-2][0-9])$", stringToChange):        
+        stringToChange = re.findall("^(.*)( )([U][1-2][0-9])$", stringToChange)[0][0] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]  
+    if re.search("^(.*)( )([1-2][0-9])$", stringToChange):        
+        stringToChange = re.findall("^(.*)( )([1-2][0-9])$", stringToChange)[0][0] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]  
     if re.search("^([1-9][0-9][0-9][0-9])( )(.*)$", stringToChange):        
         stringToChange = re.findall("^([1-9][0-9][0-9][0-9])( )(.*)$", stringToChange)[0][2] # + " " + re.findall("([A-Z][A-Z])( )(.*)", stringToChange)[0][0]  
     return stringToChange
 
 if __name__ == '__main__':
-    setDB(dropTables = False, createTables = False, deleteAllRowsOdds = True)
-    deleteOldOdds()
-    if True:
-        scrapNIKE()
-        scrapTIPSPORT()
-        scrapFORTUNA()
-        scrapDOXXBET()
-        scrapTIPOS()
-        scrapSYNNOTTIP()
-    setParticipantEinDB()
-    findBets()
-    
- 
+    # con = sqlite3.connect("data.db")
+    # cur = con.execute("""SELECT s_participant1 FROM odds""")
+    # for row in cur:
+    #     print(row[0], "---", deletePrefixSufix(row[0]))
+    # con.close()
+    setBindings()
+    if False:
+        setDB(dropTables = True, createTables = True, deleteAllRowsOdds = True)
+        deleteOldOdds()
+        if True:
+            scrapNIKE()
+            scrapTIPSPORT()
+            scrapFORTUNA()
+            scrapDOXXBET()
+            scrapTIPOS()
+            scrapSYNNOTTIP()
+        setBindings()
+        # setParticipantEinDB()
+        findBets()
