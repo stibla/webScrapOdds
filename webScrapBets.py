@@ -5,7 +5,7 @@ from selenium import webdriver
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options as ChromeOptions
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.request import Request, urlopen
 import time
 
@@ -33,6 +33,8 @@ def setDB(dropTables = False, createTables = False, deleteAllRowsOdds = False):
                     s_participantOrder TEXT,
                     s_participantOrderMatch TEXT,
                     n_matchRatio REAL,
+                    n_matchRatio1 REAL,
+                    n_matchRatio2 REAL,
                     s_expirationDate TEXT,
                     s_expirationTime TEXT,
                     n_1 REAL,
@@ -202,8 +204,8 @@ def scrapNIKE():
                                 if k['name'] == "1X": n_1X = k['odds']
                                 if k['name'] == "12": n_12 = k['odds']
                                 if k['name'] == "X2": n_X2 = k['odds']
-                    if not(n_1 is None and n_X is None and n_2 is None and n_1X is None and n_12 is None and n_X2 is None):
-                        dataDB.append((b['betId'], participant1, participant2, b['participantOrder'], b['expirationTime'][0:10], b['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                    # if not(n_1 is None and n_X is None and n_2 is None and n_1X is None and n_12 is None and n_X2 is None):
+                    dataDB.append((b['betId'], participant1, participant2, b['participantOrder'], b['expirationTime'][0:10], b['expirationTime'][11:16], n_1, n_X, n_2, n_1X, n_12, n_X2))
             saveToDB(dataDB, "NIKE")
             hasMoreBets = False
             if data_json['hasMoreBets']:
@@ -228,17 +230,23 @@ def scrapTIPSPORT():
 
         listMatch = re.findall("(<div class=\"o-matchRow\".*?<div class=\"o-matchRow__results\"></div></div>)", driver.page_source)
         for i in listMatch:
-            match = re.findall("<span data-m=\"(\d+)\">([^<]*)</span></span>.*?__dateClosed\"><span>(\d+. ?\d+. ?\d+)</span><span class=\"marL-leftS\">(\d+:\d+)", i)
+            match = re.findall("<span data-m=\"(\d+)\">([^<]*)</span></span>.*?__dateClosed\"><span>(Zajtra|Dnes|\d+. ?\d+. ?\d+) \| (\d+:\d+)", i)
             odds = re.findall(".*?\|\|(1|1x|x|x2|2)\".*?(?:(\d+\.\d+)|setPassive)", i)
             if len(odds) > 0 and len(match[0][1].split(" - ", 1)) > 1:
-                n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = None
+                n_1 = n_X = n_2 = n_1X = n_12 = n_X2 = expirationdate = None
                 for j in odds:
                     if j[0] == '1' and j[1] != '' and float(j[1]) > 1: n_1 = j[1]
                     if j[0] == '1x' and j[1] != '' and float(j[1]) > 1: n_1X = j[1]
                     if j[0] == 'x' and j[1] != '' and float(j[1]) > 1: n_X = j[1]
                     if j[0] == 'x2' and j[1] != '' and float(j[1]) > 1: n_X2 = j[1]
                     if j[0] == '2' and j[1] != '' and float(j[1]) > 1: n_2 = j[1]
-                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]), match[0][1], datetime.strftime(datetime.strptime(re.sub(" ","", match[0][2]),"%d.%m.%Y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                if match[0][2] == "Dnes":
+                    expirationdate = datetime.strftime(datetime.today(),"%Y-%m-%d")
+                elif match[0][2] == "Zajtra":
+                    expirationdate = datetime.strftime(datetime.today() + timedelta(days=1),"%Y-%m-%d")
+                else:
+                    expirationdate = datetime.strftime(datetime.strptime(re.sub(" ","", match[0][2]),"%d.%m.%Y"),"%Y-%m-%d")
+                dataDB.append((match[0][0], match[0][1].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][1].split(" - ", 1)[1]), match[0][1], expirationdate, match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "TIPSPORT")
     driver.quit()
 
@@ -336,8 +344,8 @@ def scrapTIPOS():
                     if o[0] == match[0][0].split(" - ", 1)[0]: n_1 = re.sub(",", ".", o[1])
                     if o[0] == "Remíza": n_X = re.sub(",", ".", o[1])
                     if o[0] == match[0][0].split(" - ", 1)[1]: n_2 = re.sub(",", ".", o[1])
-                if not(n_1 is None and n_X is None and n_2 is None):
-                    dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                # if not(n_1 is None and n_X is None and n_2 is None):
+                dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "TIPOS")
 
 def scrapSYNNOTTIP():
@@ -375,8 +383,8 @@ def scrapSYNNOTTIP():
                     if o[0] == match[0][0].split(" - ", 1)[0]: n_1 = re.sub(",", ".", o[1])
                     if o[0] == "Remíza": n_X = re.sub(",", ".", o[1])
                     if o[0] == match[0][0].split(" - ", 1)[1]: n_2 = re.sub(",", ".", o[1])
-                if not(n_1 is None and n_X is None and n_2 is None):
-                    dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
+                # if not(n_1 is None and n_X is None and n_2 is None):
+                dataDB.append((match[0][1], match[0][0].split(" - ", 1)[0], re.sub(" \(.*\)", "", match[0][0].split(" - ", 1)[1]), match[0][0], datetime.strftime(datetime.strptime(match[0][2],"%d.%m.%y"),"%Y-%m-%d"), match[0][3], n_1, n_X, n_2, n_1X, n_12, n_X2))
         saveToDB(dataDB, "SYNNOTTIP")
 
 def setParticipantEinDB():
@@ -473,28 +481,24 @@ def setBindings():
         ratio = SequenceMatcher(None, deletePrefixSufix(row[2]), deletePrefixSufix(row[7])).ratio()
         ratio1 = SequenceMatcher(None, deletePrefixSufix(row[3]), deletePrefixSufix(row[8])).ratio()
         ratio2 = SequenceMatcher(None, deletePrefixSufix(row[4]), deletePrefixSufix(row[9])).ratio()
-        if ratio > 0.5 and ratio1 > 0.5 and ratio2 > 0.5:
+        if (ratio > 0.5 and ratio1 > 0.5 and ratio2 > 0.5):  # or ratio1 == 1.0 or ratio2 == 1.0:
             if (row[6], row[1], ratio) not in dataDB: 
                 dataDB.append((row[1], row[6], ratio)) 
                 con.execute("""UPDATE odds
                     SET s_participantOrderMatch = ?,
-                    n_matchRatio = ?            
+                    n_matchRatio = ?,
+                    n_matchRatio1 = ?,
+                    n_matchRatio2 = ?
                     where odds.n_id_odd = ?
-                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, row[6]))
+                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, ratio1, ratio2, row[6]))
                 con.execute("""UPDATE odds
                     SET s_participantOrderMatch = ?,
-                    n_matchRatio = ?
+                    n_matchRatio = ?,
+                    n_matchRatio1 = ?,
+                    n_matchRatio2 = ?
                     where odds.n_id_odd = ?
-                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, row[1]))
-                con.commit()
-        # print(row)
-    # res = con.executemany("""INSERT INTO bindings(n_id_odd1, n_id_odd2, n_ratio, s_date_create)
-    #                         VALUES (?, ?, ?, datetime('now', 'localtime'))""", dataDB)
-    # con.commit()
-    # noOfrowCount = res.rowcount
-    # print("Insert", noOfrowCount, "counts")  
-    
-    # con.commit()
+                    and odds.s_participantOrderMatch Is Null""", (row[2], ratio, ratio1, ratio2, row[1]))
+                con.commit()    
 
     con.close()
 
@@ -658,10 +662,10 @@ if __name__ == '__main__':
     # for row in cur:
     #     print(row[0], "---", deletePrefixSufix(row[0]))
     # con.close()
-    setBindings()
-    if False:
+    # setBindings()
+    if True:
         setDB(dropTables = True, createTables = True, deleteAllRowsOdds = True)
-        deleteOldOdds()
+        # deleteOldOdds()
         if True:
             scrapNIKE()
             scrapTIPSPORT()
@@ -670,5 +674,4 @@ if __name__ == '__main__':
             scrapTIPOS()
             scrapSYNNOTTIP()
         setBindings()
-        # setParticipantEinDB()
         findBets()
