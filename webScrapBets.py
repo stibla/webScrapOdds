@@ -461,12 +461,6 @@ def deletePrefixSufix(stringToChange):
     return stringToChange
 
 if __name__ == '__main__':
-    # con = sqlite3.connect("data.db")
-    # cur = con.execute("""SELECT s_participant1 FROM odds""")
-    # for row in cur:
-    #     print(row[0], "---", deletePrefixSufix(row[0]))
-    # con.close()
-    # setBindings()
     if True:
         setDB(dropTables = True, createTables = True, deleteAllRowsOdds = True)
         # deleteOldOdds()
